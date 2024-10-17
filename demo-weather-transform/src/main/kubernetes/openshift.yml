@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-weather-transform-config
+data:
+  amqp-url: amqp://demo-weather-amq-broker-hdls-svc.dev-demo-weather-interface.svc:61616
+  kafka-bootstrap-host: demo-weather-kafka-cluster-kafka-bootstrap.dev-demo-weather-interface.svc:9092
