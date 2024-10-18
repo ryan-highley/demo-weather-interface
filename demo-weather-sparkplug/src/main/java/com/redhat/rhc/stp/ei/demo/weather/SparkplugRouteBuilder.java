@@ -11,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.camel.BindToRegistry;
+import org.apache.camel.Endpoint;
+import org.apache.camel.EndpointInject;
+import org.apache.camel.PropertyInject;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.endpoint.dsl.LogEndpointBuilderFactory.LogEndpointBuilder;
 import org.apache.camel.component.kafka.serde.KafkaHeaderDeserializer;
@@ -29,8 +32,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redhat.rhc.stp.ei.demo.weather.model.Observation;
 import com.redhat.rhc.stp.ei.demo.weather.model.QuantitativeValue;
 
-import jakarta.enterprise.inject.Produces;
-
 public class SparkplugRouteBuilder extends RouteBuilder {
 
     @SuppressWarnings("unused")
@@ -41,6 +42,24 @@ public class SparkplugRouteBuilder extends RouteBuilder {
     @BindToRegistry
     WeatherHeaderDeserializer weatherHeaderDeserializer = new WeatherHeaderDeserializer();
 
+    @BindToRegistry
+    SparkplugBPayloadMap latestObservationsPayloadMap = latestObservationsPayloadMap();
+
+    @EndpointInject("tahu-edge://WX/kdfw?deviceIds=&clientId=DemoWX-kdfw&servers=#property:mqtt-servers&metricDataTypePayloadMap=#latestObservationsPayloadMap")
+    Endpoint demoWXkdfw;
+    
+    @EndpointInject("tahu-edge://WX/kokc?deviceIds=&clientId=DemoWX-kokc&servers=#property:mqtt-servers&metricDataTypePayloadMap=#latestObservationsPayloadMap")
+    Endpoint demoWXkokc;
+    
+    @EndpointInject("tahu-edge://WX/kmco?deviceIds=&clientId=DemoWX-kmco&servers=#property:mqtt-servers&metricDataTypePayloadMap=#latestObservationsPayloadMap")
+    Endpoint demoWXkmco;
+    
+    @EndpointInject("tahu-edge://WX/kphx?deviceIds=&clientId=DemoWX-kphx&servers=#property:mqtt-servers&metricDataTypePayloadMap=#latestObservationsPayloadMap")
+    Endpoint demoWXkphx;
+    
+    @EndpointInject("tahu-edge://WX/kbos?deviceIds=&clientId=DemoWX-kbos&servers=#property:mqtt-servers&metricDataTypePayloadMap=#latestObservationsPayloadMap")
+    Endpoint demoWXkbos;
+    
     @Override
     public void configure() throws Exception {
 
@@ -63,14 +82,8 @@ public class SparkplugRouteBuilder extends RouteBuilder {
                 .to(errorLogEndpoint)
             .end()
             .transform().method(SparkplugRouteBuilder.class, "convertLatestObservation")
-            // .to(logEndpoint)
-            .toD("""
-                tahu-edge://WX/${headers[weatherStation]}
-                ?deviceIds=
-                &clientId=DemoWX-${headers[weatherStation]}
-                &servers=localhivemq:tcp://localhost:1883
-                &metricDataTypePayloadMap=#latestObservationsPayloadMap
-            """)
+            .to(logEndpoint)
+            .routingSlip().simple("tahu-edge://WX/${headers[weatherStation]}")
             ;
     }
 
@@ -183,16 +196,14 @@ public class SparkplugRouteBuilder extends RouteBuilder {
         .toArray(new Map.Entry[] { Map.entry("", Observation.class.getFields()[0]) })
     );
 
-    @Produces
-    @BindToRegistry
-    public SparkplugBPayloadMap latestObservationsPayloadMap() {
-            var latestObservationsPayloadMapBuilder = new SparkplugBPayloadMap.SparkplugBPayloadMapBuilder();
+    private static SparkplugBPayloadMap latestObservationsPayloadMap() {
+        var latestObservationsPayloadMapBuilder = new SparkplugBPayloadMap.SparkplugBPayloadMapBuilder();
 
-            latestObservationsMetrics.entrySet().stream()
-                .map(e -> createEmptyMetric(e.getKey(), e.getValue()))
-                .forEach(latestObservationsPayloadMapBuilder::addMetric);
+        latestObservationsMetrics.entrySet().stream()
+            .map(e -> createEmptyMetric(e.getKey(), e.getValue()))
+            .forEach(latestObservationsPayloadMapBuilder::addMetric);
 
-            return latestObservationsPayloadMapBuilder.createPayload();
+        return latestObservationsPayloadMapBuilder.createPayload();
     }
 
     private static Metric createEmptyMetric(String name, MetricDataType type) {
