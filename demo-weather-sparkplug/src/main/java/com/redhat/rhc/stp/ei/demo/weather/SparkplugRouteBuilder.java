@@ -13,7 +13,6 @@ import java.util.Map;
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.Endpoint;
 import org.apache.camel.EndpointInject;
-import org.apache.camel.PropertyInject;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.endpoint.dsl.LogEndpointBuilderFactory.LogEndpointBuilder;
 import org.apache.camel.component.kafka.serde.KafkaHeaderDeserializer;
